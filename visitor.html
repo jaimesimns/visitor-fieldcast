@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FIELDCAST — Audio Experiences</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lato:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+  :root {
+    --cream: #f5f0e8;
+    --warm: #ede6d6;
+    --dark: #1a1410;
+    --brown: #3d2b1f;
+    --rust: #b5451b;
+    --gold: #c9973a;
+    --sage: #5a7a5e;
+    --muted: #8a7d72;
+    --border: #d4c9b8;
+    --card: #ffffff;
+    --shadow: rgba(26,20,16,0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Lato', sans-serif;
+    font-weight: 300;
+    background: var(--cream);
+    color: var(--dark);
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.5;
+  }
+
+  /* HEADER */
+  .site-header {
+    background: var(--dark);
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .site-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--cream);
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+  .site-logo em { font-style: italic; color: var(--gold); }
+
+  .site-nav { display: flex; gap: 4px; }
+  .nav-btn {
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    font-family: 'Lato', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .nav-btn:hover { color: var(--cream); border-color: rgba(255,255,255,0.4); }
+  .nav-btn.active { background: rgba(255,255,255,0.1); color: var(--cream); border-color: var(--gold); }
+
+  .gps-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.06em;
+  }
+  .gps-pip { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all 0.5s; }
+  .gps-pip.active { background: #6dde8a; box-shadow: 0 0 6px #6dde8a; animation: pip 2s infinite; }
+  @keyframes pip { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+  /* VIEWS */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ─── BROWSE VIEW ─── */
+  .browse-hero {
+    background: var(--dark);
+    padding: 48px 24px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .browse-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 70% 50%, rgba(201,151,58,0.15) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 12px;
+  }
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-weight: 700;
+    color: var(--cream);
+    line-height: 1.1;
+    max-width: 480px;
+    margin-bottom: 16px;
+  }
+  .hero-title em { font-style: italic; color: var(--gold); }
+  .hero-subtitle {
+    font-size: 0.9rem;
+    color: rgba(245,240,232,0.55);
+    max-width: 380px;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+  .hero-decoration {
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 8rem;
+    opacity: 0.04;
+    pointer-events: none;
+    user-select: none;
+    font-family: 'Playfair Display', serif;
+  }
+
+  .browse-body { padding: 32px 20px 100px; max-width: 680px; margin: 0 auto; }
+
+  .section-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .exp-grid { display: flex; flex-direction: column; gap: 20px; }
+
+  /* EXPERIENCE CARD */
+  .exp-card-visitor {
+    background: var(--card);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 16px var(--shadow);
+    cursor: pointer;
+    transition: all 0.25s;
+    border: 1px solid transparent;
+    animation: fadeUp 0.5s ease both;
+  }
+  .exp-card-visitor:hover { transform: translateY(-3px); box-shadow: 0 8px 32px var(--shadow); border-color: var(--border); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)} }
+
+  .exp-card-cover {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    background: var(--warm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .exp-card-cover-placeholder {
+    width: 100%;
+    height: 180px;
+    background: linear-gradient(135deg, var(--warm) 0%, #e0d4c0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .exp-card-cover-placeholder::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(0,0,0,0.015) 20px, rgba(0,0,0,0.015) 40px);
+  }
+  .exp-card-cover img { width: 100%; height: 180px; object-fit: cover; }
+
+  .exp-card-body { padding: 18px 20px 20px; }
+  .exp-card-kicker {
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--rust);
+    margin-bottom: 6px;
+  }
+  .exp-card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--dark);
+    margin-bottom: 8px;
+  }
+  .exp-card-tagline {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .exp-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .exp-meta-item { display: flex; align-items: center; gap: 4px; }
+  .btn-begin {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1.5px solid var(--dark);
+    background: transparent;
+    color: var(--dark);
+    font-family: 'Lato', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  .btn-begin:hover { background: var(--dark); color: var(--cream); }
+  .btn-begin span { font-size: 1rem; }
+
+  .empty-browse {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .empty-browse-icon { font-size: 4rem; margin-bottom: 20px; opacity: 0.3; }
+  .empty-browse-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--brown); margin-bottom: 12px; }
+  .empty-browse-text { font-size: 0.85rem; color: var(--muted); line-height: 1.7; }
+
+  /* ─── EXPERIENCE DETAIL VIEW ─── */
+  #detailView {
+    min-height: 100dvh;
+    display: none;
+    flex-direction: column;
+  }
+  #detailView.active { display: flex; }
+
+  .detail-hero {
+    background: var(--dark);
+    padding: 24px 24px 32px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .btn-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 20px;
+    transition: color 0.2s;
+  }
+  .btn-back:hover { color: var(--cream); }
+
+  .detail-kicker { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+  .detail-title { font-family: 'Playfair Display', serif; font-size: clamp(1.6rem, 5vw, 2.4rem); font-weight: 700; color: var(--cream); line-height: 1.15; margin-bottom: 10px; }
+  .detail-tagline { font-size: 0.9rem; color: rgba(245,240,232,0.55); line-height: 1.6; max-width: 420px; }
+  .detail-meta-row { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; }
+  .detail-meta-pill { display: flex; align-items: center; gap: 5px; font-size: 0.65rem; letter-spacing: 0.08em; color: rgba(255,255,255,0.45); text-transform: uppercase; }
+  .detail-meta-pill strong { color: rgba(255,255,255,0.75); font-weight: 400; }
+
+  .detail-body { flex: 1; overflow-y: auto; padding: 24px 20px 120px; max-width: 680px; margin: 0 auto; width: 100%; }
+  .detail-body::-webkit-scrollbar { width: 4px; }
+  .detail-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .detail-desc { font-size: 0.9rem; color: var(--brown); line-height: 1.8; margin-bottom: 28px; }
+
+  /* STOP LIST */
+  .stop-list { display: flex; flex-direction: column; gap: 0; margin-bottom: 32px; }
+  .stop-item {
+    display: flex;
+    gap: 0;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .stop-item:hover .stop-content { background: rgba(201,151,58,0.04); }
+  .stop-item.active .stop-content { background: rgba(181,69,27,0.04); border-color: rgba(181,69,27,0.25); }
+  .stop-item.playing .stop-content { background: rgba(181,69,27,0.06); }
+
+  .stop-spine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 40px;
+    flex-shrink: 0;
+    padding-top: 16px;
+  }
+  .stop-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 0;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    position: relative;
+    z-index: 1;
+  }
+  .stop-item.active .stop-num { border-color: var(--rust); color: var(--rust); background: rgba(181,69,27,0.08); }
+  .stop-item.playing .stop-num { border-color: var(--rust); background: var(--rust); color: #fff; }
+  .stop-line { flex: 1; width: 1px; background: var(--border); margin-top: 4px; margin-bottom: 0; min-height: 20px; }
+  .stop-item:last-child .stop-line { display: none; }
+
+  .stop-content {
+    flex: 1;
+    padding: 14px 14px 14px 12px;
+    margin-bottom: 2px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+  .stop-type-label { font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .stop-type-label.audio { color: var(--sage); }
+  .stop-type-label.photo { color: #4a7fa0; }
+  .stop-type-label.scan3d { color: var(--rust); }
+  .stop-title { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 600; color: var(--dark); margin-bottom: 4px; line-height: 1.3; }
+  .stop-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.55; }
+  .stop-playing-indicator { display: none; align-items: center; gap: 5px; margin-top: 8px; font-size: 0.65rem; color: var(--rust); letter-spacing: 0.08em; }
+  .stop-item.playing .stop-playing-indicator { display: flex; }
+  .playing-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--rust); animation: pip 0.8s infinite; }
+  .playing-dot:nth-child(2){animation-delay:0.2s}.playing-dot:nth-child(3){animation-delay:0.4s}
+
+  /* MAP STRIP */
+  .map-strip { height: 240px; border-radius: 12px; overflow: hidden; margin-bottom: 28px; border: 1px solid var(--border); }
+  #expMap { width: 100%; height: 100%; }
+
+  /* PLAYER BAR (fixed bottom) */
+  .player-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--dark);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 12px 20px 20px;
+    z-index: 600;
+    display: none;
+  }
+  .player-bar.visible { display: block; }
+
+  .player-now {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .player-thumb {
+    width: 40px; height: 40px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+  .player-info { flex: 1; min-width: 0; }
+  .player-title { font-family: 'Playfair Display', serif; font-size: 0.95rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .player-sub { font-size: 0.65rem; color: rgba(255,255,255,0.4); margin-top: 2px; letter-spacing: 0.05em; }
+
+  .player-controls { display: flex; align-items: center; gap: 10px; }
+  .btn-p-prev, .btn-p-next {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem;
+    transition: all 0.15s;
+  }
+  .btn-p-prev:hover, .btn-p-next:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-p-play {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--cream);
+    background: transparent;
+    color: var(--cream);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    transition: all 0.15s;
+  }
+  .btn-p-play:hover { background: var(--cream); color: var(--dark); }
+  .btn-p-stop {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: transparent;
+    color: rgba(255,255,255,0.4);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+    transition: all 0.15s;
+  }
+  .btn-p-stop:hover { border-color: var(--rust); color: var(--rust); }
+
+  .player-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .progress-time { font-size: 0.62rem; color: rgba(255,255,255,0.35); font-variant-numeric: tabular-nums; width: 32px; }
+  .progress-bar {
+    flex: 1;
+    height: 3px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+  }
+  .progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.5s linear; pointer-events: none; }
+
+  /* ─── MAP VIEW ─── */
+  #mapView { height: calc(100dvh - 56px); }
+  #mainMap { width: 100%; height: 100%; }
+
+  /* Marker styles */
+  .v-marker-ring {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid;
+    backdrop-filter: blur(4px);
+    animation: vPop 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+    cursor: pointer;
+  }
+  @keyframes vPop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+  .v-marker-ring.audio{border-color:#6dde8a;background:rgba(109,222,138,0.15)}
+  .v-marker-ring.photo{border-color:#60bde8;background:rgba(96,189,232,0.15)}
+  .v-marker-ring.scan3d{border-color:#e8a060;background:rgba(232,160,96,0.15)}
+  .v-marker-label{position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:rgba(26,20,16,0.85);color:#f5f0e8;font-size:0.58rem;padding:2px 7px;border-radius:4px;white-space:nowrap;pointer-events:none;letter-spacing:0.04em;backdrop-filter:blur(4px);}
+  .v-user-dot{width:18px;height:18px;border-radius:50%;background:#6dde8a;border:3px solid #1a1410;box-shadow:0 0 0 4px rgba(109,222,138,0.25)}
+
+  /* MAP ATTRIBUTION */
+  .leaflet-control-attribution { display: none; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--dark); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 18px; font-size: 0.75rem; color: var(--cream); z-index: 9999; opacity: 0; transition: all 0.3s; pointer-events: none; white-space: nowrap; letter-spacing: 0.04em; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* PHOTO LIGHTBOX */
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 8000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .lightbox.open { opacity: 1; pointer-events: all; }
+  .lightbox img { max-width: 90vw; max-height: 85dvh; border-radius: 4px; object-fit: contain; }
+  .lightbox-close { position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.6); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  @media (min-width: 640px) {
+    .browse-body { padding: 40px 24px 120px; }
+    .exp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-logo">Field<em>cast</em></div>
+  <nav class="site-nav">
+    <button class="nav-btn active" onclick="showView('browse')">Experiences</button>
+    <button class="nav-btn" onclick="showView('map')">Map</button>
+  </nav>
+  <div class="gps-pill">
+    <div class="gps-pip" id="gpsPip"></div>
+    <span id="gpsLabel">locating</span>
+  </div>
+</header>
+
+<!-- BROWSE VIEW -->
+<div id="browseView" class="view active">
+  <div class="browse-hero">
+    <div class="hero-decoration">FC</div>
+    <div class="hero-eyebrow">Spatial Audio Tours</div>
+    <h1 class="hero-title">Listen to<br>places come <em>alive.</em></h1>
+    <p class="hero-subtitle">Walk through curated audio experiences anchored to real locations. Let the city tell you its stories.</p>
+  </div>
+  <div class="browse-body">
+    <div class="section-label">Available now</div>
+    <div class="exp-grid" id="expGrid"></div>
+  </div>
+</div>
+
+<!-- EXPERIENCE DETAIL VIEW -->
+<div id="detailView" class="view">
+  <div class="detail-hero">
+    <button class="btn-back" onclick="closeDetail()">← Back</button>
+    <div class="detail-kicker">Audio Experience</div>
+    <h2 class="detail-title" id="detailTitle">—</h2>
+    <p class="detail-tagline" id="detailTagline">—</p>
+    <div class="detail-meta-row">
+      <div class="detail-meta-pill">🎙 <strong id="detailStopCount">0</strong> stops</div>
+      <div class="detail-meta-pill" id="detailDurationPill" style="display:none">⏱ <strong id="detailDuration">—</strong></div>
+    </div>
+  </div>
+  <div class="detail-body">
+    <p class="detail-desc" id="detailDesc"></p>
+    <div class="section-label">Stops along the way</div>
+    <div class="stop-list" id="stopList"></div>
+    <div class="section-label">On the map</div>
+    <div class="map-strip"><div id="expMap"></div></div>
+  </div>
+</div>
+
+<!-- MAP VIEW -->
+<div id="mapView" class="view">
+  <div id="mainMap"></div>
+</div>
+
+<!-- PLAYER BAR -->
+<div class="player-bar" id="playerBar">
+  <div class="player-now">
+    <div class="player-thumb" id="playerThumb">🎙</div>
+    <div class="player-info">
+      <div class="player-title" id="playerTitle">—</div>
+      <div class="player-sub" id="playerSub">—</div>
+    </div>
+    <div class="player-controls">
+      <button class="btn-p-prev" id="btnPrev" title="Previous stop">⏮</button>
+      <button class="btn-p-play" id="btnPlayPause">▶</button>
+      <button class="btn-p-next" id="btnNext" title="Next stop">⏭</button>
+      <button class="btn-p-stop" id="btnStop" title="Stop">■</button>
+    </div>
+  </div>
+  <div class="player-progress">
+    <span class="progress-time" id="progressCurrent">0:00</span>
+    <div class="progress-bar" id="progressBar" onclick="seekAudio(event)">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <span class="progress-time" id="progressTotal">0:00</span>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// DATA LOADING
+// ═══════════════════════════════════════
+
+// Data can come from:
+// 1. fieldcast-data.json (exported from admin, placed next to this file)
+// 2. localStorage (for local dev / same-device testing)
+
+let data = { markers: [], experiences: [] };
+let currentExp = null;
+let currentStopIdx = 0;
+let audioEl = null;
+let userLat = null, userLon = null;
+let mainMap = null, expMapInst = null;
+let userMarkerMain = null, userMarkerExp = null;
+let expMapMarkers = [];
+let mainMapMarkers = [];
+
+async function loadData() {
+  // Try JSON file first
+  try {
+    const res = await fetch('./fieldcast-data.json');
+    if (res.ok) {
+      data = await res.json();
+      renderBrowse();
+      return;
+    }
+  } catch(e) {}
+
+  // Fall back to localStorage (same device as admin)
+  try {
+    const markers = JSON.parse(localStorage.getItem('fieldcast_markers') || '[]');
+    const experiences = JSON.parse(localStorage.getItem('fieldcast_experiences') || '[]');
+    data = { markers, experiences: experiences.filter(e=>e.status==='published') };
+  } catch(e) {}
+
+  renderBrowse();
+  initMainMap();
+}
+
+// ═══════════════════════════════════════
+// GPS
+// ═══════════════════════════════════════
+const gpsPip = document.getElementById('gpsPip');
+const gpsLabel = document.getElementById('gpsLabel');
+
+if (navigator.geolocation) {
+  navigator.geolocation.watchPosition(pos => {
+    userLat = pos.coords.latitude;
+    userLon = pos.coords.longitude;
+    gpsPip.className = 'gps-pip active';
+    gpsLabel.textContent = `${userLat.toFixed(3)}°`;
+    updateUserMarkers();
+    checkProximityAutoPlay();
+  }, () => {
+    gpsPip.className = 'gps-pip';
+    gpsLabel.textContent = 'no gps';
+  }, { enableHighAccuracy: true, maximumAge: 5000 });
+}
+
+function updateUserMarkers() {
+  if (!userLat) return;
+  const ll = [userLat, userLon];
+  const icon = L.divIcon({ className:'', html:`<div class="v-user-dot"></div>`, iconSize:[18,18], iconAnchor:[9,9] });
+  if (mainMap) {
+    if (userMarkerMain) userMarkerMain.setLatLng(ll);
+    else userMarkerMain = L.marker(ll, { icon, zIndexOffset:1000 }).addTo(mainMap);
+  }
+  if (expMapInst) {
+    if (userMarkerExp) userMarkerExp.setLatLng(ll);
+    else userMarkerExp = L.marker(ll, { icon, zIndexOffset:1000 }).addTo(expMapInst);
+  }
+}
+
+// ═══════════════════════════════════════
+// VIEW SWITCHING
+// ═══════════════════════════════════════
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(name+'View').classList.add('active');
+  document.querySelector(`.nav-btn[onclick="showView('${name}')"]`).classList.add('active');
+
+  if (name==='map') {
+    setTimeout(()=>{ if(!mainMap) initMainMap(); else mainMap.invalidateSize(); },50);
+  }
+}
+
+// ═══════════════════════════════════════
+// BROWSE
+// ═══════════════════════════════════════
+function renderBrowse() {
+  const grid = document.getElementById('expGrid');
+  const exps = data.experiences.filter(e=>e.status==='published');
+
+  if (exps.length===0) {
+    grid.innerHTML=`<div class="empty-browse" style="grid-column:1/-1">
+      <div class="empty-browse-icon">🎧</div>
+      <div class="empty-browse-title">No experiences yet</div>
+      <div class="empty-browse-text">Check back soon — audio experiences<br>will appear here when published.</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = exps.map((exp,i) => {
+    const markers = (exp.markerIds||[]).map(id=>data.markers.find(m=>m.id===id)).filter(Boolean);
+    const audioCount = markers.filter(m=>m.type==='audio').length;
+    return `<div class="exp-card-visitor" style="animation-delay:${i*0.08}s" onclick="openExp('${exp.id}')">
+      ${exp.cover
+        ? `<div class="exp-card-cover"><img src="${exp.cover}" alt="${exp.title}" loading="lazy"></div>`
+        : `<div class="exp-card-cover-placeholder">🎧</div>`
+      }
+      <div class="exp-card-body">
+        <div class="exp-card-kicker">Audio Experience · ${markers.length} stops</div>
+        <div class="exp-card-title">${exp.title}</div>
+        ${exp.tagline?`<div class="exp-card-tagline">${exp.tagline}</div>`:''}
+        <div class="exp-card-meta">
+          ${audioCount?`<div class="exp-meta-item">🎙 ${audioCount} audio</div>`:''}
+          ${exp.duration?`<div class="exp-meta-item">⏱ ${exp.duration}</div>`:''}
+        </div>
+        <button class="btn-begin">Begin experience <span>→</span></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// EXPERIENCE DETAIL
+// ═══════════════════════════════════════
+function openExp(id) {
+  const exp = data.experiences.find(e=>e.id===id);
+  if (!exp) return;
+  currentExp = exp;
+  currentStopIdx = 0;
+
+  document.getElementById('detailTitle').textContent = exp.title;
+  document.getElementById('detailTagline').textContent = exp.tagline || exp.desc || '';
+  const markers = (exp.markerIds||[]).map(id=>data.markers.find(m=>m.id===id)).filter(Boolean);
+  document.getElementById('detailStopCount').textContent = markers.length;
+  const durPill = document.getElementById('detailDurationPill');
+  if (exp.duration) { document.getElementById('detailDuration').textContent=exp.duration; durPill.style.display=''; }
+  else durPill.style.display='none';
+  document.getElementById('detailDesc').textContent = exp.desc || '';
+
+  renderStopList(markers);
+  buildExpMap(markers);
+
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('detailView').classList.add('active');
+}
+
+function closeDetail() {
+  showView('browse');
+  stopAudio();
+}
+
+function renderStopList(markers) {
+  const typeIcons = { audio:'🎙', photo:'📷', scan3d:'🧊' };
+  const typeLabels = { audio:'Audio', photo:'Photo', scan3d:'3D Scan' };
+  document.getElementById('stopList').innerHTML = markers.map((m,i)=>`
+    <div class="stop-item" id="stop_${m.id}" onclick="handleStopClick('${m.id}', ${i})">
+      <div class="stop-spine">
+        <div class="stop-num">${i+1}</div>
+        <div class="stop-line"></div>
+      </div>
+      <div class="stop-content">
+        <div class="stop-type-label ${m.type}">${typeIcons[m.type]} ${typeLabels[m.type]}</div>
+        <div class="stop-title">${m.title}</div>
+        ${m.desc?`<div class="stop-desc">${m.desc}</div>`:''}
+        <div class="stop-playing-indicator">
+          <div class="playing-dot"></div><div class="playing-dot"></div><div class="playing-dot"></div>
+          Now playing
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function handleStopClick(markerId, idx) {
+  const m = data.markers.find(x=>x.id===markerId);
+  if (!m) return;
+
+  // Highlight
+  document.querySelectorAll('.stop-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('stop_'+markerId)?.classList.add('active');
+  currentStopIdx = idx;
+
+  if (m.type==='audio') {
+    playMarkerAudio(m, idx);
+  } else if (m.type==='photo') {
+    const url = getMediaUrl(markerId);
+    if (url) openLightbox(url);
+    else showToast('No photo stored for this marker');
+  } else if (m.type==='scan3d') {
+    const url = getMediaUrl(markerId);
+    if (url) { const a=document.createElement('a');a.href=url;a.download=m.mediaName||'scan';a.click(); }
+    else showToast('No 3D scan file stored');
+  }
+}
+
+// ═══════════════════════════════════════
+// EXPERIENCE MAP
+// ═══════════════════════════════════════
+function buildExpMap(markers) {
+  if (expMapInst) { expMapInst.remove(); expMapInst=null; expMapMarkers=[]; userMarkerExp=null; }
+  setTimeout(()=>{
+    expMapInst = L.map('expMap', { zoomControl:false, attributionControl:false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(expMapInst);
+
+    if (markers.length===0) return;
+    const typeColors = { audio:'#6dde8a', photo:'#60bde8', scan3d:'#e8a060' };
+    const typeIcons = { audio:'🎙', photo:'📷', scan3d:'🧊' };
+
+    markers.forEach((m,i)=>{
+      const icon = L.divIcon({
+        className:'',
+        html:`<div style="position:relative"><div class="v-marker-label">${i+1}. ${m.title}</div><div class="v-marker-ring ${m.type}"><span style="font-size:0.9rem">${typeIcons[m.type]}</span></div></div>`,
+        iconSize:[38,38], iconAnchor:[19,19],
+      });
+      L.marker([m.lat,m.lon],{icon}).addTo(expMapInst).on('click',()=>handleStopClick(m.id,i));
+    });
+
+    // Fit bounds
+    const lats = markers.map(m=>m.lat), lons = markers.map(m=>m.lon);
+    if (markers.length===1) { expMapInst.setView([lats[0],lons[0]],16); }
+    else { expMapInst.fitBounds([[Math.min(...lats),Math.min(...lons)],[Math.max(...lats),Math.max(...lons)]], {padding:[24,24]}); }
+
+    if (userLat) {
+      const uIcon=L.divIcon({className:'',html:`<div class="v-user-dot"></div>`,iconSize:[18,18],iconAnchor:[9,9]});
+      userMarkerExp=L.marker([userLat,userLon],{icon:uIcon,zIndexOffset:1000}).addTo(expMapInst);
+    }
+  }, 80);
+}
+
+// ═══════════════════════════════════════
+// MAIN MAP
+// ═══════════════════════════════════════
+function initMainMap() {
+  if (mainMap) return;
+  mainMap = L.map('mainMap', { center:[51.505,-0.09], zoom:13, zoomControl:false, attributionControl:false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(mainMap);
+  L.control.zoom({ position:'topright' }).addTo(mainMap);
+
+  const typeIcons = { audio:'🎙', photo:'📷', scan3d:'🧊' };
+
+  // Group markers by experience membership
+  const expMarkers = new Map();
+  data.experiences.filter(e=>e.status==='published').forEach(exp=>{
+    (exp.markerIds||[]).forEach(id=>expMarkers.set(id, exp.id));
+  });
+
+  data.markers.forEach(m=>{
+    const icon = L.divIcon({
+      className:'',
+      html:`<div style="position:relative"><div class="v-marker-label">${m.title}</div><div class="v-marker-ring ${m.type}"><span style="font-size:0.9rem">${typeIcons[m.type]}</span></div></div>`,
+      iconSize:[38,38],iconAnchor:[19,19],
+    });
+    const lm = L.marker([m.lat,m.lon],{icon}).addTo(mainMap);
+    const expId = expMarkers.get(m.id);
+    if (expId) lm.on('click',()=>openExp(expId));
+    mainMapMarkers.push(lm);
+  });
+
+  if (data.markers.length>0) {
+    const lats=data.markers.map(m=>m.lat), lons=data.markers.map(m=>m.lon);
+    if(data.markers.length===1) mainMap.setView([lats[0],lons[0]],16);
+    else mainMap.fitBounds([[Math.min(...lats),Math.min(...lons)],[Math.max(...lats),Math.max(...lons)]],{padding:[32,32]});
+  } else if (userLat) {
+    mainMap.setView([userLat,userLon],14);
+  }
+}
+
+// ═══════════════════════════════════════
+// AUDIO PLAYER
+// ═══════════════════════════════════════
+function getMediaUrl(markerId) {
+  // Try localStorage-backed IndexedDB (same-device)
+  return window._mediaCache?.[markerId] || null;
+}
+
+// Pre-load media URLs from IndexedDB on startup
+(async()=>{
+  window._mediaCache = {};
+  try {
+    const db = await openDB();
+    const tx = db.transaction('media','readonly');
+    const store = tx.objectStore('media');
+    const req = store.getAllKeys();
+    req.onsuccess = async()=>{
+      const keys = req.result;
+      for (const k of keys) {
+        await new Promise(res=>{
+          const r2=store.get(k);
+          r2.onsuccess=()=>{ if(r2.result) window._mediaCache[k]=URL.createObjectURL(r2.result); res(); };
+          r2.onerror=()=>res();
+        });
+      }
+    };
+  } catch(e){}
+})();
+
+let _db=null;
+function openDB(){if(_db)return Promise.resolve(_db);return new Promise((res,rej)=>{const req=indexedDB.open('fieldcast',1);req.onupgradeneeded=e=>{e.target.result.createObjectStore('media');};req.onsuccess=e=>{_db=e.target.result;res(_db);};req.onerror=rej;});}
+
+function playMarkerAudio(marker, idx) {
+  const url = getMediaUrl(marker.id);
+  if (!url) {
+    showToast('No audio file available for this stop');
+    return;
+  }
+
+  stopAudio(false);
+
+  audioEl = new Audio(url);
+  currentStopIdx = idx;
+
+  // Update stop UI
+  document.querySelectorAll('.stop-item').forEach(el=>el.classList.remove('playing'));
+  document.getElementById('stop_'+marker.id)?.classList.add('playing');
+
+  // Player bar
+  const bar = document.getElementById('playerBar');
+  bar.classList.add('visible');
+  const typeIcons = { audio:'🎙', photo:'📷', scan3d:'🧊' };
+  document.getElementById('playerThumb').textContent = typeIcons[marker.type]||'🎙';
+  document.getElementById('playerTitle').textContent = marker.title;
+  document.getElementById('playerSub').textContent = `Stop ${idx+1} of ${(currentExp?.markerIds||[]).length}`;
+  document.getElementById('btnPlayPause').textContent = '⏸';
+
+  audioEl.play().catch(()=>{});
+
+  audioEl.ontimeupdate = () => {
+    const cur = document.getElementById('progressCurrent');
+    const fill = document.getElementById('progressFill');
+    const tot = document.getElementById('progressTotal');
+    if(cur) cur.textContent = formatTime(audioEl.currentTime);
+    if(tot) tot.textContent = formatTime(audioEl.duration||0);
+    if(fill&&audioEl.duration) fill.style.width = (audioEl.currentTime/audioEl.duration*100)+'%';
+  };
+
+  audioEl.onended = () => {
+    document.getElementById('btnPlayPause').textContent='▶';
+    document.querySelectorAll('.stop-item').forEach(el=>el.classList.remove('playing'));
+    // Auto-advance to next stop
+    const markers = (currentExp?.markerIds||[]).map(id=>data.markers.find(m=>m.id===id)).filter(Boolean);
+    const next = markers[currentStopIdx+1];
+    if (next && next.type==='audio') {
+      setTimeout(()=>playMarkerAudio(next, currentStopIdx+1), 800);
+    }
+  };
+}
+
+function stopAudio(hideBar=true) {
+  if (audioEl) { audioEl.pause(); audioEl=null; }
+  document.querySelectorAll('.stop-item').forEach(el=>el.classList.remove('playing'));
+  document.getElementById('progressFill').style.width='0%';
+  document.getElementById('progressCurrent').textContent='0:00';
+  document.getElementById('progressTotal').textContent='0:00';
+  document.getElementById('btnPlayPause').textContent='▶';
+  if (hideBar) document.getElementById('playerBar').classList.remove('visible');
+}
+
+document.getElementById('btnPlayPause').onclick = () => {
+  if (!audioEl) return;
+  if (audioEl.paused) { audioEl.play(); document.getElementById('btnPlayPause').textContent='⏸'; }
+  else { audioEl.pause(); document.getElementById('btnPlayPause').textContent='▶'; }
+};
+
+document.getElementById('btnStop').onclick = () => stopAudio(true);
+
+document.getElementById('btnPrev').onclick = () => {
+  if (!currentExp) return;
+  const markers = (currentExp.markerIds||[]).map(id=>data.markers.find(m=>m.id===id)).filter(Boolean);
+  const prev = markers[currentStopIdx-1];
+  if (prev) handleStopClick(prev.id, currentStopIdx-1);
+};
+
+document.getElementById('btnNext').onclick = () => {
+  if (!currentExp) return;
+  const markers = (currentExp.markerIds||[]).map(id=>data.markers.find(m=>m.id===id)).filter(Boolean);
+  const next = markers[currentStopIdx+1];
+  if (next) handleStopClick(next.id, currentStopIdx+1);
+};
+
+function seekAudio(e) {
+  if (!audioEl||!audioEl.duration) return;
+  const bar = document.getElementById('progressBar');
+  const rect = bar.getBoundingClientRect();
+  const pct = (e.clientX-rect.left)/rect.width;
+  audioEl.currentTime = pct*audioEl.duration;
+}
+
+// ═══════════════════════════════════════
+// PROXIMITY AUTO-TRIGGER
+// ═══════════════════════════════════════
+let lastProxCheck = 0;
+function checkProximityAutoPlay() {
+  if (!userLat || !currentExp) return;
+  const now = Date.now();
+  if (now-lastProxCheck < 4000) return;
+  lastProxCheck = now;
+  if (audioEl && !audioEl.paused) return; // already playing
+
+  const markers = (currentExp.markerIds||[]).map(id=>data.markers.find(m=>m.id===id)).filter(Boolean);
+  markers.forEach((m,i)=>{
+    const dist = getDistance(userLat,userLon,m.lat,m.lon);
+    if (dist<(m.radius||30)&&m.type==='audio') {
+      showToast(`📍 Entering "${m.title}"`);
+      handleStopClick(m.id,i);
+    }
+  });
+}
+
+function getDistance(lat1,lon1,lat2,lon2){const R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180,a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+
+// ═══════════════════════════════════════
+// LIGHTBOX
+// ═══════════════════════════════════════
+function openLightbox(url) {
+  document.getElementById('lightboxImg').src=url;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+
+// ═══════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════
+function formatTime(s){if(!s||isNaN(s))return'0:00';const m=Math.floor(s/60);const sec=Math.floor(s%60).toString().padStart(2,'0');return`${m}:${sec}`;}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(showToast._t);showToast._t=setTimeout(()=>t.classList.remove('show'),3000);}
+
+// INIT
+loadData();
+</script>
+</body>
+</html>
