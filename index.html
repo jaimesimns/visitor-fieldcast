@@ -610,23 +610,35 @@ function checkProximity() {
   const now = Date.now(); if (now - lastProx < 2000) return; lastProx = now;
 
   resolveItems(currentExp).forEach((m, i) => {
-    if (!m.lat) return;
+    if (!m.lat || m.type !== 'audio' || !m.media_url) return;
     const dist = haversine(userLat, userLon, m.lat, m.lon);
+    const coreR = m.radius || 30;
+    const fadeR = m.fade_radius || 80;
 
-    // Trigger playback on entry
-    if (dist < (m.radius || 30) && m.type === 'audio' && m.media_url) {
-      if (!audioEl || audioEl.paused) {
+    // Auto-trigger when entering fade zone
+    if (dist <= fadeR && (!audioEl || audioEl.paused)) {
+      if (!audioEl || audioEl.src !== m.media_url) {
         toast('📍 Entering "' + m.title + '"');
         handleStop(m.id, i);
-      }
-      // Cancel any active fade if user re-enters the zone
-      if (fadingForMarker === m.id) {
-        clearInterval(fadeInterval);
-        fadeInterval = null;
-        fadingForMarker = null;
-        if (audioEl) audioEl.volume = 1;
+        return;
       }
     }
+
+    // Adjust volume based on distance
+    if (audioEl && audioEl.src && audioEl.src.includes(m.id.slice(0,8))) {
+      const volC = (m.vol_center ?? 100) / 100;
+      const volE = (m.vol_edge ?? 0) / 100;
+      if (dist <= coreR) {
+        audioEl.volume = volC;
+      } else if (dist <= fadeR) {
+        const t = (dist - coreR) / (fadeR - coreR); // 0→1
+        audioEl.volume = volC + (volE - volC) * t;
+      } else {
+        audioEl.volume = volE;
+      }
+    }
+  });
+}
 
     // Fade out when beyond fade_radius (but only for the currently playing marker)
     if (m.fade_radius && m.fade_radius > 0 && audioEl && !audioEl.paused) {
