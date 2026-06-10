@@ -568,6 +568,7 @@ function playAudio(m, idx) {
 
 function stopAudio(hide = true) {
   if (audioEl) { audioEl.pause(); audioEl = null; }
+  if (fadeInterval) { clearInterval(fadeInterval); fadeInterval = null; fadingForMarker = null; }
   document.querySelectorAll('.stop-row').forEach(r => r.classList.remove('on'));
   document.getElementById('progFill').style.width = '0%';
   document.getElementById('progCur').textContent = '0:00';
@@ -599,7 +600,7 @@ document.getElementById('progBar').onclick = e => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// PROXIMITY TRIGGER
+// PROXIMITY TRIGGER + SPATIAL VOLUME
 // ─────────────────────────────────────────────────────────────
 let lastProx = 0;
 let fadeInterval = null;
@@ -615,7 +616,7 @@ function checkProximity() {
     const coreR = m.radius || 30;
     const fadeR = m.fade_radius || 80;
 
-    // Auto-trigger when entering fade zone
+    // Auto-trigger when entering fade zone while nothing is playing
     if (dist <= fadeR && (!audioEl || audioEl.paused)) {
       if (!audioEl || audioEl.src !== m.media_url) {
         toast('📍 Entering "' + m.title + '"');
@@ -624,26 +625,25 @@ function checkProximity() {
       }
     }
 
-    // Adjust volume based on distance
-    if (audioEl && audioEl.src && audioEl.src.includes(m.id.slice(0,8))) {
-      const volC = (m.vol_center ?? 100) / 100;
-      const volE = (m.vol_edge ?? 0) / 100;
-      if (dist <= coreR) {
-        audioEl.volume = volC;
-      } else if (dist <= fadeR) {
-        const t = (dist - coreR) / (fadeR - coreR); // 0→1
-        audioEl.volume = volC + (volE - volC) * t;
-      } else {
-        audioEl.volume = volE;
+    // Continuously adjust volume for the currently playing marker
+    if (audioEl && !audioEl.paused && document.getElementById('sr_' + m.id)?.classList.contains('on')) {
+      // Cancel any in-progress fade-out if we stepped back into the zone
+      if (fadingForMarker === m.id && dist <= fadeR) {
+        clearInterval(fadeInterval); fadeInterval = null; fadingForMarker = null;
       }
-    }
-  });
-}
 
-    // Fade out when beyond fade_radius (but only for the currently playing marker)
-    if (m.fade_radius && m.fade_radius > 0 && audioEl && !audioEl.paused) {
-      const playingThisMarker = document.getElementById('sr_' + m.id)?.classList.contains('on');
-      if (playingThisMarker && dist > m.fade_radius && fadingForMarker !== m.id) {
+      if (dist <= fadeR) {
+        // Interpolate volume: full at core, edge vol at fade boundary
+        const volC = (m.vol_center ?? 100) / 100;
+        const volE = (m.vol_edge ?? 0) / 100;
+        if (dist <= coreR) {
+          audioEl.volume = volC;
+        } else {
+          const t = (dist - coreR) / (fadeR - coreR); // 0 at core edge → 1 at fade boundary
+          audioEl.volume = volC + (volE - volC) * t;
+        }
+      } else if (fadingForMarker !== m.id) {
+        // Beyond fade radius — gradually fade out then stop
         fadingForMarker = m.id;
         fadeInterval = setInterval(() => {
           if (!audioEl) { clearInterval(fadeInterval); fadingForMarker = null; return; }
@@ -651,8 +651,7 @@ function checkProximity() {
             audioEl.volume = Math.max(0, audioEl.volume - 0.05);
           } else {
             audioEl.volume = 0;
-            clearInterval(fadeInterval);
-            fadingForMarker = null;
+            clearInterval(fadeInterval); fadeInterval = null; fadingForMarker = null;
             stopAudio(true);
             toast('📍 Left "' + m.title + '"');
           }
@@ -661,7 +660,6 @@ function checkProximity() {
     }
   });
 }
-
 function haversine(la1, lo1, la2, lo2) {
   const R = 6371000, dL = (la2-la1)*Math.PI/180, dO = (lo2-lo1)*Math.PI/180;
   const a = Math.sin(dL/2)**2 + Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;
