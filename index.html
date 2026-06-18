@@ -675,7 +675,7 @@ header {
       <div class="hero-overlay"></div>
       <div class="hero-content">
         <div class="h-eye">Spatial Audio Tours</div>
-        <h1 class="h-title">Listen where<br>things <em>remain.</em></h1>
+        <h1 class="h-title">Listen where<br>things <em>remain.</em></h1><br>
         <div class="h-rule"></div>
         <p class="h-sub" id="heroSub">Four soundwalks exploring death, ecology, memory and place.</p>
         <a class="h-cta" onclick="document.getElementById('journeys').scrollIntoView({behavior:'smooth'})">
@@ -943,7 +943,7 @@ function renderBrowse() {
   if (D.experiences.length) {
     const n = D.experiences.length;
     document.getElementById('heroSub').textContent =
-      n + ' soundwalk' + (n!==1?'s':'') + ' exploring place, memory and time.';
+      n + ' soundwalk' + (n!==1?'s':'') + ' exploring place, memory, and time.';
   }
 
   if (!D.experiences.length) {
